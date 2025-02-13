@@ -1,0 +1,13 @@
+Flask==2.2.5
+gunicorn==23.0.0
+langchain==0.3.17
+langchain-community==0.3.16
+langchain-core==0.3.33
+langchain-experimental==0.3.4
+langchain-google-genai==2.0.9
+langchain-google-vertexai==2.0.13
+langchain-huggingface==0.1.2
+langchain-text-splitters==0.3.5
+openai-whisper @ git+https://github.com/openai/whisper.git@90db0de1896c23cbfaf0c58bc2d30665f709f170
+python-dotenv==1.0.1
+yt-dlp==2025.1.26

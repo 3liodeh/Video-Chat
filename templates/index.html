@@ -1,0 +1,408 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Video Chat</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f6f8fc 0%, #e9edf5 100%);
+    }
+    
+    .glass-morphism {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+    
+    .chat-container {
+      height: calc(100vh - 16rem);
+      scroll-behavior: smooth;
+    }
+    
+    .message {
+      max-width: 80%;
+      margin: 0.5rem;
+      padding: 1rem;
+      border-radius: 1rem;
+      animation: messageSlide 0.3s ease-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .user-message {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: white;
+      margin-left: auto;
+      position: relative;
+    }
+    
+    .assistant-message {
+      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+      border: 1px solid #e5e7eb;
+      margin-right: auto;
+      position: relative;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 1.5rem;
+      height: 1.5rem;
+      border: 3px solid #e5e7eb;
+      border-top: 3px solid #4f46e5;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    .input-container {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .input-container:focus-within {
+      transform: translateY(-2px);
+    }
+    
+    .animated-button {
+      transition: all 0.3s ease;
+      transform: translateY(0);
+    }
+    
+    .animated-button:hover:not(:disabled) {
+      transform: translateY(-2px);
+    }
+    
+    .disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .chat-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .chat-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+    
+    .chat-container::-webkit-scrollbar-thumb {
+      background: #c7c7c7;
+      border-radius: 3px;
+    }
+    
+    .chat-container::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+    
+    .gradient-text {
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    /* إخفاء التسميات للقراء الشاشة */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+<body class="min-h-screen py-8 px-4 md:px-0">
+  <div class="container mx-auto max-w-4xl">
+    <header class="text-center mb-12">
+      <h1 class="text-4xl font-bold gradient-text mb-2">YouTube Video Chat Assistant</h1>
+      <p class="text-gray-600">أدخل رابط يوتيوب وابدأ التحدث عن محتوى الفيديو</p>
+    </header>
+    
+    <!-- قسم إدخال رابط اليوتيوب -->
+    <section class="mb-8">
+      <div class="glass-morphism rounded-2xl p-6">
+        <form id="url-form" aria-label="نموذج إدخال رابط يوتيوب" class="flex flex-col md:flex-row gap-4">
+          <div class="input-container flex-1">
+            <label for="youtube-url" class="sr-only">رابط يوتيوب</label>
+            <input type="text" id="youtube-url" name="youtube-url"
+                   class="w-full p-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                   placeholder="أدخل رابط يوتيوب..." aria-required="true">
+          </div>
+          <button type="submit" id="process-url-btn"
+                  class="animated-button px-8 py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-xl hover:from-indigo-500 hover:to-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-lg disabled"
+                  aria-disabled="false">
+            معالجة الرابط
+          </button>
+        </form>
+        <p id="url-status" class="mt-3 text-sm text-gray-600"></p>
+      </div>
+    </section>
+
+    <!-- قسم الدردشة -->
+    <section>
+      <div class="glass-morphism rounded-2xl p-6">
+        <div id="chat-messages" class="chat-container overflow-y-auto mb-6 px-2" aria-live="polite">
+          <!-- رسالة ترحيبية -->
+          <div class="message assistant-message">
+            👋 مرحباً! بعد معالجة رابط اليوتيوب يمكنك طرح أسئلة عن محتوى الفيديو.
+          </div>
+        </div>
+
+        <form id="chat-form" aria-label="نموذج دردشة" class="flex flex-col md:flex-row gap-4">
+          <div class="input-container flex-1">
+            <label for="user-input" class="sr-only">رسالتك</label>
+            <input type="text" id="user-input" name="user-input"
+                   class="w-full p-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                   placeholder="اكتب رسالتك..." disabled aria-required="true">
+          </div>
+          <button type="submit" id="send-message-btn"
+                  class="animated-button px-8 py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-xl hover:from-indigo-500 hover:to-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-lg disabled"
+                  disabled aria-disabled="true">
+            إرسال الرسالة
+          </button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // استخدام ES6 مع const و arrow functions
+    const messagesContainer = document.getElementById('chat-messages');
+    const userInput = document.getElementById('user-input');
+    const youtubeUrl = document.getElementById('youtube-url');
+    const sendButton = document.getElementById('send-message-btn');
+    const processUrlButton = document.getElementById('process-url-btn');
+    const urlStatus = document.getElementById('url-status');
+    const urlForm = document.getElementById('url-form');
+    const chatForm = document.getElementById('chat-form');
+
+    let currentTaskId = null;
+    let urlProcessed = false;
+
+    // دالة للتمرير إلى أسفل المحادثة
+    const scrollToBottom = () => {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    };
+
+    // دالة لإضافة رسالة إلى الدردشة
+    const addMessage = (content, isUser = false) => {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+      messageDiv.textContent = content;
+      messagesContainer.appendChild(messageDiv);
+      scrollToBottom();
+    };
+
+    // دالة لإضافة مؤشر تحميل في الدردشة
+    const addLoadingIndicator = () => {
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'message assistant-message loading-message';
+      loadingDiv.innerHTML = '<div class="loading" aria-label="جاري التحميل"></div>';
+      messagesContainer.appendChild(loadingDiv);
+      scrollToBottom();
+      return loadingDiv;
+    };
+
+    // دالة للتحقق من صحة رابط يوتيوب باستخدام تعبير نمطي
+    const isValidYouTubeUrl = (url) => {
+      const regex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
+      return regex.test(url);
+    };
+
+    // دوال لتمكين وتعطيل عناصر الإدخال
+    const setUrlFormEnabled = (enabled) => {
+      youtubeUrl.disabled = !enabled;
+      processUrlButton.disabled = !enabled;
+      processUrlButton.setAttribute('aria-disabled', !enabled);
+    };
+
+    const setChatFormEnabled = (enabled) => {
+      userInput.disabled = !enabled;
+      sendButton.disabled = !enabled;
+      sendButton.setAttribute('aria-disabled', !enabled);
+    };
+
+    // دالة معالجة رابط اليوتيوب
+    const processURL = async (event) => {
+      event.preventDefault();
+      const url = youtubeUrl.value.trim();
+
+      // التحقق من صحة الرابط قبل الإرسال
+      if (!url || !isValidYouTubeUrl(url)) {
+        urlStatus.textContent = 'يرجى إدخال رابط يوتيوب صالح';
+        return;
+      }
+
+      // تعطيل عناصر الإدخال أثناء المعالجة
+      setUrlFormEnabled(false);
+      urlStatus.textContent = 'جارٍ معالجة الرابط... قد يستغرق ذلك بعض الوقت.';
+      const loadingIndicator = addLoadingIndicator();
+
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            youtube_url: url,
+            query: "فحص صلاحية الرابط ومعالجته."
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`خطأ في الشبكة: ${response.status}`);
+        }
+
+        const data = await response.json();
+        currentTaskId = data.task_id;
+        await checkInitialStatus(data.task_id, loadingIndicator);
+      } catch (error) {
+        console.error('Error processing URL:', error);
+        loadingIndicator.remove();
+        urlStatus.textContent = 'حدث خطأ أثناء معالجة الرابط. يرجى المحاولة مرة أخرى.';
+        setUrlFormEnabled(true);
+      }
+    };
+
+    // دالة التحقق الدوري لحالة المعالجة مع مهلة 5 دقائق (300 محاولة)
+    const checkInitialStatus = async (taskId, loadingIndicator, attempts = 0) => {
+      const MAX_ATTEMPTS = 300; // 300 محاولة ~ 5 دقائق
+      try {
+        const response = await fetch(`/status/${taskId}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+        const data = await response.json();
+
+        if (data.status === 'complete') {
+          loadingIndicator.remove();
+          if (data.response === "Invalid URL") {
+            urlStatus.textContent = 'رابط يوتيوب غير صالح. يرجى التحقق والمحاولة مرة أخرى.';
+            setUrlFormEnabled(true);
+          } else {
+            urlStatus.textContent = 'تم معالجة الرابط بنجاح! يمكنك الآن بدء الدردشة.';
+            urlProcessed = true;
+            setChatFormEnabled(true);
+          }
+          currentTaskId = null;
+        } else if (data.status === 'processing' && attempts < MAX_ATTEMPTS) {
+          setTimeout(() => checkInitialStatus(taskId, loadingIndicator, attempts + 1), 1000);
+          urlStatus.textContent = 'جارٍ معالجة الرابط... يرجى الانتظار.';
+        } else {
+          loadingIndicator.remove();
+          urlStatus.textContent = 'انتهت المهلة أو حدث خطأ أثناء معالجة الرابط.';
+          setUrlFormEnabled(true);
+          currentTaskId = null;
+        }
+      } catch (error) {
+        console.error('Error checking initial status:', error);
+        loadingIndicator.remove();
+        urlStatus.textContent = 'حدث خطأ أثناء التحقق من حالة الرابط. يرجى المحاولة مرة أخرى.';
+        setUrlFormEnabled(true);
+        currentTaskId = null;
+      }
+    };
+
+    // دالة التحقق الدوري لحالة طلب الدردشة مع مهلة 5 دقائق (300 محاولة)
+    const checkStatus = async (taskId, loadingIndicator, attempts = 0) => {
+      const MAX_ATTEMPTS = 300; // 300 محاولة ~ 5 دقائق
+      try {
+        const response = await fetch(`/status/${taskId}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+        const data = await response.json();
+
+        if (data.status === 'complete') {
+          loadingIndicator.remove();
+          addMessage(data.response);
+          currentTaskId = null;
+        } else if (data.status === 'processing' && attempts < MAX_ATTEMPTS) {
+          setTimeout(() => checkStatus(taskId, loadingIndicator, attempts + 1), 1000);
+        } else {
+          loadingIndicator.remove();
+          addMessage('انتهت المهلة أو حدث خطأ أثناء معالجة طلبك.');
+          currentTaskId = null;
+        }
+      } catch (error) {
+        console.error('Error checking status:', error);
+        loadingIndicator.remove();
+        addMessage('حدث خطأ أثناء التحقق من الحالة.');
+        currentTaskId = null;
+      }
+    };
+
+    // دالة إرسال رسالة الدردشة
+    const sendMessage = async (event) => {
+      event.preventDefault();
+      const message = userInput.value.trim();
+      const url = youtubeUrl.value.trim();
+
+      if (!message || !url || currentTaskId || !urlProcessed) return;
+
+      addMessage(message, true);
+      userInput.value = '';
+      const loadingIndicator = addLoadingIndicator();
+
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            youtube_url: url,
+            query: message
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        currentTaskId = data.task_id;
+        checkStatus(data.task_id, loadingIndicator);
+      } catch (error) {
+        console.error('Error sending message:', error);
+        loadingIndicator.remove();
+        addMessage('حدث خطأ أثناء إرسال رسالتك.');
+        currentTaskId = null;
+      }
+    };
+
+    // إضافة مستمعي الأحداث باستخدام addEventListener بدلاً من سمات onclick
+    urlForm.addEventListener('submit', processURL);
+    chatForm.addEventListener('submit', sendMessage);
+
+    // إضافة مستمع لإرسال الرسالة عند الضغط على Enter داخل حقل الإدخال لتحسين تجربة المستخدم
+    userInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !userInput.disabled) {
+        e.preventDefault();
+        sendMessage(e);
+      }
+    });
+  </script>
+</body>
+</html>
