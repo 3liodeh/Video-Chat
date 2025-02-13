@@ -51,6 +51,5 @@ def get_status(task_id):
     return jsonify({"status": "processing"})
 
 if __name__ == '__main__':
-    # قراءة متغير PORT من البيئة، واستخدام 5000 إذا لم يتوفر
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=True)
